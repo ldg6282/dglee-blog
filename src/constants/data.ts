@@ -1,16 +1,17 @@
 export const USER_INFORMATIONS = {
-  headerTitle: "EXAMPLE",
-  userName: "EXAMPLE",
-  mascot: "👀",
-  resume: "https://www.EXAMPLE.com",
-  github: "https://www.EXAMPLE.com",
-  domain: "https://www.EXAMPLE.com",
-  meta: {
-    title: "EXAMPLE",
-    description: "EXAMPLE",
-  },
+  "headerTitle": "dglee",
+  "userName": "이도건",
+  "mascot": "🐼",
+  "resume": "",
+  "github": "https://github.com/ldg6282",
+  "domain": "https://www.dglee.site",
+  "meta": {
+    "title": "dglee 개발블로그",
+    "description": "안녕하세요 프론트엔드 개발자 이도건입니다:)"
+  }
 };
 
 export const CATEGORY_ICONS: Record<string, string> = {
+  끄적끄적: "🍀",
   All: "🏠",
 };

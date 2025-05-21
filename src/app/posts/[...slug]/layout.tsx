@@ -18,9 +18,9 @@ const PostLayout = ({
         <ScrollProgress />
 
         {children}
-        <div className="py-24">
+        {/* <div className="py-24">
           <Comments />
-        </div>
+        </div> */}
       </div>
     </main>
   );
