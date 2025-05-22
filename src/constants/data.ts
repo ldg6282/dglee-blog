@@ -12,6 +12,7 @@ export const USER_INFORMATIONS = {
 };
 
 export const CATEGORY_ICONS: Record<string, string> = {
-  끄적끄적: "🍀",
+  STUDY: "📚",
+  ME: "🍀",
   All: "🏠",
 };
