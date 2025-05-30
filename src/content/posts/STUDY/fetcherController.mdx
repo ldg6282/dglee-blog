@@ -1,0 +1,198 @@
+---
+title: API 로직과 UI 로직 분리해보기
+description: API 로직과 UI 로직을 분리하는 시도를 해봤습니다.
+date: "2025-05-30"
+keywords: []
+# thumbnail: "/images/posts/STUDY/fetcherController/thumbnail.png"
+---
+
+
+회사에서 작업 중인 코드에서는 API 로직과 UI 렌더링 로직이 한 파일에 함께 작성되는 경우가 많았습니다.<br />
+데이터의 형태가 같더라도 내용이 조금만 달라지면, 중복되는 UI 로직을 계속 새로 작성해야 해서 유지보수에 많은 리소스가 소요되곤 했습니다.  
+그래서 이번에는 **API 처리(fetcher)** 와 **UI 처리(controller)** 를 분리하는 방식을 시도해봤습니다.
+
+---
+
+## 기존 방식
+
+API와 UI 로직이 한 파일에 혼재되어 있었습니다.  
+데이터의 형태가 같더라도 내용이 조금만 달라지면, 파일을 새로 만들어야 했습니다.  
+
+- 중복되는 코드가 많아짐  
+- 유지보수가 어렵고, 실수할 가능성도 높아짐
+- 제품의 규모가 커짐에 따라 유지보수에 필요한 리소스가 계속 상승함
+
+---
+
+## 해결 전략
+
+이 문제를 개선하기 위해 **데이터 처리(fetcher)** 와 **공통 UI(controller)** 를 분리하는 방식을 시도해봤습니다.  
+fetcher는 데이터만 내려주는 역할로 단순화했고, controller는 UI만 담당하도록 해봤습니다.  
+이렇게 하면 데이터가 바뀌어도 UI 컴포넌트를 그대로 재사용할 수 있고, 중복 코드를 줄일 수 있겠다고 생각했습니다.
+
+---
+
+### 예시로 이해하기
+
+작은 예시로, 토글로 선택되는 버튼에 따라 다른 데이터를 사용하는 `WordTableFetcher`와 `NumberTableFetcher`를 만들어보았습니다.<br />
+아래는 토글 버튼과 함께 fetcher가 조건에 따라 렌더링되는 코드입니다.
+```tsx
+export default function Page() {
+  const [currentActive, setCurrentActive] = useState<"left" | "right">("left");
+
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="w-[500px] gap-3 flex flex-col">
+        <ToggleButton
+          currentActive={currentActive}
+          onToggle={setCurrentActive}
+        />
+        {currentActive === "left" && <WordTableFetcher />}
+        {currentActive === "right" && <NumberTableFetcher />}
+      </div>
+    </div>
+  );
+}
+```
+
+토글 버튼을 누르면<br />
+	•	**currentActive** 가 "left" 또는 "right"로 바뀌면서<br />
+	•	`WordTableFetcher` 또는 `NumberTableFetcher` 중 하나가 렌더링됩니다.
+
+```tsx
+// WordTableFetcher.tsx
+export const WordTableFetcher = () => {
+  const data = ["Apple", "Banana", "Orange", "Mango", "Pineapple"];
+
+  // 문자로 이루어진 과일 이름이 담긴 배열을 prop으로 내려줍니다.
+  return <TableController data={data} title="Word Table" />;
+};
+
+// NumberTableFetcher.tsx
+export const NumberTableFetcher = () => {
+  const data = [10, 20, 30, 40, 50];
+
+  // 숫로 이루어진 배열을 prop으로 내려줍니다.
+  return <TableController data={data} title="Number Table" />
+};
+```
+
+위처럼 선택되는 토글 버튼에 따라 각각의 fetcher는 데이터만 다르게 prop으로 내려줄 뿐이고,
+UI를 담당하는 TableController 는 아래처럼 공통적인 테이블 UI를 그려줍니다.
+
+```tsx
+type TableProps = {
+  data: (string | number)[];
+  title: string;
+};
+
+export const TableController = ({ data, title }: TableProps) => {
+  return (
+    <div className="p-4 border rounded">
+      <h2 className="text-xl font-bold mb-2">{title}</h2>
+      <table className="min-w-full border">
+        <thead>
+          <tr className="bg-gray-200">
+            <th className="py-2 border">Index</th>
+            <th className="py-2 border">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((item, index) => (
+            <tr key={index} className="border-b">
+              <td className="py-2 px-4 border">{index + 1}</td>
+              <td className="py-2 px-4 border">{item}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+```
+
+이렇게 함으로써 데이터를 내려주는 부분만 다르게 하고, UI는 공통으로 재사용할 수 있었습니다.
+
+버튼 클릭으로 요청 데이터를 전환하고, 각 fetcher는 다른 데이터를 내려주면서, 최종적으로는 같은 `TableController`가 UI를 렌더링하는 구조가 만들어졌습니다.
+
+---
+
+### 이미지로 다시보기
+<div className="flex gap-2 justify-center [&>*]:m-0">
+  ![제어 컴포넌트](/images/posts/STUDY/fetcherController/word.png)
+  ![제어 컴포넌트](/images/posts/STUDY/fetcherController/number.png)
+</div>
+
+위의 이미지를 보면,
+위쪽은 **WordTableFetcher**가 내려준 과일 데이터를 TableController가 렌더링한 모습이고,
+아래쪽은 **NumberTableFetcher**가 내려준 숫자 데이터를 같은 TableController가 렌더링한 모습입니다.
+
+같은 형태의 UI지만, 데이터를 내려주는 fetcher만 달라져서 서로 다른 결과물이 만들어지는 것을 한눈에 볼 수 있었습니다.
+이렇게 하면 UI를 따로 중복 작성할 필요 없이, 데이터만 바꿔서 공통 UI를 그대로 재사용할 수 있게 되었습니다.
+
+---
+
+### 로딩 처리도 fetcher에서
+
+추가로, 로딩 처리도 fetcher에서 담당하도록 해봤습니다.
+<div className="flex gap-2 justify-center">
+  ![제어 컴포넌트](/images/posts/STUDY/fetcherController/toggle.gif)
+</div>
+
+아래 예시는 실제 API 요청 대신 setTimeout을 사용해 데이터를 흉내낸 코드입니다.
+
+```tsx
+export const NumberTableFetcher = () => {
+  const [data, setData] = useState<number[] | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setData([10, 20, 30, 40, 50]);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!data) {
+    return <div>Loading...</div>;
+  }
+
+  return <TableController data={data} title="Number Table" />
+};
+```
+
+---
+
+### 실제 로직에서는?
+
+위의 예시는 단순히 데이터를 흉내낸 것이지만,
+실제 코드에서는 아래와 같이 React Query 같은 쿼리 라이브러리를 사용해 데이터를 불러오게 됩니다.<br />
+그리고 Suspense fallback을 이용해, 로딩 상태를 좀 더 자연스럽게 처리하는 것도 가능했습니다.
+
+```tsx
+export const NumberTableFetcher = () => {
+  const { data } = useNumberDataQuery();
+
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <TableController data={data} title="Number Table" />
+    </Suspense>
+  );
+};
+```
+
+이렇게 하면 fetcher는 데이터 요청/로딩 관리만 하고,
+controller는 “데이터가 오면 그려주기만” 하도록 역할이 분리되었습니다.
+덕분에 API 요청 방식이나 데이터 소스가 달라져도, UI 컴포넌트는 그대로 유지할 수 있었습니다.
+
+---
+
+### 마무리하며
+
+이번에 데이터를 내려주는 부분(fetcher)과 UI를 그려주는 부분(controller)을 분리해보면서,  
+기존에 섞여 있던 코드의 중복을 많이 줄일 수 있었습니다.<br />
+특히, 데이터를 바꿔도 UI는 그대로 유지되니까 유지보수성이 한층 좋아졌다고 느꼈습니다.
+
+물론 이 방식이 모든 상황에서 무조건 정답은 아니겠지만, 앞으로도 더 효율적인 코드 구조를 고민하면서 프론트엔드 개발자로서 계속 발전해나가고 싶습니다.
+
+---
